@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>batchAddGff.sh 使用说明</title>
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; background-color: #f8f9fa; margin: 20px; color: #333; }
+        h1, h2, h3 { color: #0056b3; }
+        code { background-color: #f1f1f1; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background-color: #272822; color: #f8f8f2; padding: 10px; border-radius: 6px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 8px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .note { background-color: #fff3cd; padding: 10px; border-left: 5px solid #ffc107; }
+        .cmd { background-color: #e9ecef; padding: 8px; border-radius: 4px; margin: 5px 0; display: inline-block; }
+    </style>
+</head>
+<body>
+    <h1>📘 batchAddGff.sh 使用说明</h1>
+
+    <h2>📝 脚本功能</h2>
+    <p>
+        <code>batchAddGff.sh</code> 用于批量将 GFF/GFF3 注释文件添加到 
+        <a href="https://jbrowse.org/" target="_blank">JBrowse</a> 数据库中，主要功能包括：
+    </p>
+    <ul>
+        <li>自动解压、排序、压缩（bgzip）GFF 文件</li>
+        <li>自动创建 tabix 索引（.tbi）</li>
+        <li>使用 <b>最长公共子串</b> 匹配最合适的 Assembly 名称</li>
+        <li>避免重复生成已存在的压缩文件和索引</li>
+        <li>自动检查 JBrowse 配置文件避免重复 Track</li>
+        <li>提供 <b>Dry-run 模式</b> 预览操作，不执行修改</li>
+        <li>输出详细的 <code>summary.csv</code> 处理结果</li>
+    </ul>
+
+    <h2>📂 输入文件要求</h2>
+    <ul>
+        <li>目录下的文件名需符合：<code>*.gff.gz</code> 或 <code>*.gff3.gz</code></li>
+        <li>文件名中需包含物种信息，例如：
+            <code>Euplotes_vannus.MAC.Lyu-unpub.GFF.sort.gff3.gz</code>
+        </li>
+        <li>JBrowse 配置文件中需有对应的 Assembly 名称，脚本会根据最长公共子串自动匹配</li>
+    </ul>
+
+    <h2>⚙️ 脚本参数</h2>
+    <pre><code>bash batchAddGff.sh &lt;目录路径&gt; [选项]</code></pre>
+    <table>
+        <tr><th>参数</th><th>说明</th><th>默认值</th></tr>
+        <tr><td>&lt;目录路径&gt;</td><td>包含 .gff.gz 或 .gff3.gz 文件的目录（必填）</td><td>-</td></tr>
+        <tr><td>--debug</td><td>调试模式，打印详细执行步骤</td><td>关闭</td></tr>
+        <tr><td>--force</td><td>强制重建中间文件，覆盖现有结果</td><td>关闭</td></tr>
+        <tr><td>--dry-run</td><td>只显示计划执行的操作和匹配结果，不做实际修改</td><td>关闭</td></tr>
+        <tr><td>--threshold &lt;N&gt;</td><td>公共子串匹配阈值，Assembly 匹配需 ≥ N</td><td>10</td></tr>
+    </table>
+
+    <h2>🔍 匹配逻辑</h2>
+    <ul>
+        <li>提取文件名基准物种名（去掉 <code>.MAC</code>、<code>.GFF</code>、<code>.gz</code>）</li>
+        <li>遍历 JBrowse 配置文件中的所有 Assembly 名称</li>
+        <li>计算最长公共子串长度</li>
+        <li>选择公共子串最长的 Assembly，长度需 ≥ <code>--threshold</code></li>
+        <li>若无匹配，文件跳过处理</li>
+    </ul>
+
+    <h2>📄 输出文件</h2>
+    <ul>
+        <li><b>日志文件</b>：<code>batchAddGff.log</code></li>
+        <li><b>结果文件</b>：<code>summary.csv</code></li>
+    </ul>
+    <p>summary.csv 包含列：</p>
+    <pre><code>文件名,Assembly 名称,状态,公共子串长度,错误信息</code></pre>
+    <p>状态包括：</p>
+    <ul>
+        <li>成功</li>
+        <li>已存在跳过</li>
+        <li>未找到 Assembly</li>
+        <li>索引失败</li>
+        <li>添加失败</li>
+        <li>DRY-RUN</li>
+    </ul>
+
+    <h2>🚀 使用示例</h2>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff</div><br>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff --debug</div><br>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff --dry-run</div><br>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff --threshold 12</div><br>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff --force</div><br>
+    <div class="cmd">bash batchAddGff.sh /bjued/data/gff --debug --dry-run --threshold 12</div>
+
+    <h2>✅ 处理流程概述</h2>
+    <ol>
+        <li>遍历目录中的 GFF 文件</li>
+        <li>使用 LCS 匹配找到最合适的 Assembly</li>
+        <li>跳过已有结果（除非使用 <code>--force</code>）</li>
+        <li>解压 → 排序 → 压缩 → 建立索引</li>
+        <li>检查重复 Track，若无则添加到 JBrowse</li>
+        <li>输出日志和汇总文件</li>
+    </ol>
+
+    <div class="note">
+        💡 提示：可使用 <code>--dry-run</code> 模式先查看匹配结果（包含公共子串长度），确认无误后再执行正式处理。
+    </div>
+</body>
+</html>
