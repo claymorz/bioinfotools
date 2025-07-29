@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>批量添加 FASTA 到 JBrowse 使用说明</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; background-color: #f8f9fa; margin: 20px; color: #333; }
+    h1, h2, h3 { color: #007bff; }
+    code { background-color: #f1f1f1; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+    pre { background-color: #272822; color: #f8f8f2; padding: 10px; border-radius: 6px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    table, th, td { border: 1px solid #ddd; }
+    th, td { padding: 8px; text-align: left; }
+    th { background-color: #007bff; color: white; }
+    .note { background-color: #fff3cd; padding: 10px; border-left: 5px solid #ffc107; }
+    .cmd { background-color: #e9ecef; padding: 8px; border-radius: 4px; margin: 5px 0; display: inline-block; }
+  </style>
+</head>
+<body>
+  <h1>📘 批量添加 FASTA 到 JBrowse 使用说明</h1>
+
+  <h2>📝 脚本功能</h2>
+  <p>
+    <code>batchAddAssembly.sh</code> 用于批量处理指定目录下的 <code>.fasta.gz</code> 文件，将基因组序列添加到 
+    <a href="https://jbrowse.org/" target="_blank">JBrowse</a> 数据库中，主要功能包括：
+  </p>
+  <ul>
+    <li>解压 FASTA 文件（兼容无 <code>-k</code> 的 gzip）</li>
+    <li>使用 <code>samtools faidx</code> 自动建立索引</li>
+    <li>检查 <code>config.json</code> 是否已存在该物种，避免重复添加</li>
+    <li>调用 <code>jbrowse add-assembly</code> 将物种基因组添加到 JBrowse</li>
+  </ul>
+
+  <h2>📂 输入文件要求</h2>
+  <ul>
+    <li>目录下的文件名需符合：<code>*.fasta.gz</code></li>
+    <li>文件名中需包含物种信息，例如：
+      <code>Balantidium_ctenopharyngodoni.MAC.Zhao-2024.Assembly.fasta.gz</code>
+    </li>
+    <li>脚本会自动解压并使用文件名（去掉 <code>.fasta</code> 后缀）作为物种名称</li>
+  </ul>
+
+  <h2>⚙️ 脚本参数</h2>
+  <pre><code>bash batchAddAssembly.sh &lt;目录路径&gt;</code></pre>
+  <table>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td>&lt;目录路径&gt;</td><td>包含 <code>.fasta.gz</code> 文件的目录（必填）</td></tr>
+  </table>
+
+  <h2>📄 输出文件</h2>
+  <ul>
+    <li><b>解压结果</b>：与原文件同目录的 <code>.fasta</code> 文件</li>
+    <li><b>索引文件</b>：<code>.fai</code> 文件</li>
+    <li><b>JBrowse 结果</b>：基因组添加到 <code>/bjued/jbrowse/fa</code>，并写入 <code>config.json</code></li>
+  </ul>
+
+  <h2>🚀 使用示例</h2>
+  <div class="cmd">bash batchAddAssembly.sh /bjued/data/fa</div>
+
+  <h2>✅ 处理流程概述</h2>
+  <ol>
+    <li>遍历目录中的所有 <code>.fasta.gz</code> 文件</li>
+    <li>若未解压则解压，生成 <code>.fasta</code> 文件</li>
+    <li>检查是否已有 <code>.fai</code> 索引，如无则使用 <code>samtools faidx</code> 创建</li>
+    <li>从文件名提取物种名称</li>
+    <li>检查 JBrowse 配置文件中是否已存在该物种，如无则执行 <code>jbrowse add-assembly</code></li>
+  </ol>
+
+  <div class="note">
+    💡 提示：<br>
+    - 如果 <code>samtools faidx</code> 报错提示 “行长不一致”，请先修复 FASTA 文件格式。<br>
+    - 脚本会避免重复添加已存在的物种和索引文件。
+  </div>
+</body>
+</html>
