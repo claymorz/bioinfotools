@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>batchAddBam.sh 使用说明</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }
+    h1 { color: #2c3e50; }
+    h2 { color: #34495e; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+    pre { background: #ecf0f1; padding: 10px; border-radius: 5px; }
+    code { background: #ecf0f1; padding: 2px 5px; border-radius: 3px; }
+    table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .note { background: #fff3cd; padding: 10px; border-left: 4px solid #ffcc00; }
+</style>
+</head>
+<body>
+<h1>batchAddBam.sh 使用说明</h1>
+
+<h2>1️⃣ 功能概述</h2>
+<p>该脚本用于 <strong>批量将 BAM 文件添加到 JBrowse</strong>，并自动完成以下工作：</p>
+<ul>
+<li>为每个 BAM 文件生成索引（<code>.bai</code>）</li>
+<li>根据 JBrowse <code>config.json</code> 中的 assemblies 名称自动匹配物种</li>
+<li>避免重复添加已经存在的 Tracks</li>
+<li>支持 Dry-run（预览操作，不执行修改）</li>
+<li>支持设置物种名匹配阈值</li>
+<li>处理文件名中的空格和特殊字符</li>
+<li>生成 TSV 汇总表（包含每个 BAM 的匹配结果和操作状态）</li>
+</ul>
+
+<h2>2️⃣ 基本用法</h2>
+<pre><code>chmod +x batchAddBam.sh
+./batchAddBam.sh &lt;bam_directory&gt; [选项]
+</code></pre>
+
+<h3>参数说明</h3>
+<table>
+<tr><th>参数</th><th>说明</th></tr>
+<tr><td><code>&lt;bam_directory&gt;</code></td><td>存放 <code>.bam</code> 文件的目录（必填）</td></tr>
+<tr><td><code>--dry-run</code></td><td>仅预览将执行的操作，不修改 JBrowse 配置文件</td></tr>
+<tr><td><code>--threshold N</code></td><td>设置物种名匹配的最长公共子串阈值（默认 <code>10</code>）</td></tr>
+</table>
+
+<h2>3️⃣ 使用示例</h2>
+<pre><code># 1. Dry-run 模式（预览匹配结果）
+./batchAddBam.sh ../bam --dry-run
+
+# 2. Dry-run 并调整匹配阈值
+./batchAddBam.sh ../bam --dry-run --threshold 12
+
+# 3. 实际运行（写入 JBrowse）
+./batchAddBam.sh ../bam
+</code></pre>
+
+<h2>4️⃣ 输出文件</h2>
+<p>运行后，脚本会在当前目录生成：</p>
+<ul>
+<li><code>bam_add_summary.tsv</code>：包含每个 BAM 文件的处理结果</li>
+</ul>
+
+<table>
+<tr><th>BAM_File</th><th>Species</th><th>Score</th><th>Action</th></tr>
+<tr><td>Euplotes_vannus_[...]bam</td><td>Euplotes_vannus</td><td>15</td><td>Dry-run add</td></tr>
+<tr><td>Oxytricha_trifallax_[...]bam</td><td>Oxytricha_trifallax</td><td>16</td><td>Added</td></tr>
+<tr><td>file3.bam</td><td>-</td><td>-</td><td>No match</td></tr>
+<tr><td>file4.bam</td><td>-</td><td>-</td><td>Skipped (exists)</td></tr>
+</table>
+
+<h2>5️⃣ 逻辑说明</h2>
+<ul>
+<li><strong>索引生成</strong>：如果不存在 <code>.bai</code> 文件，自动执行 <code>samtools index</code></li>
+<li><strong>重复检测</strong>：从 <code>config.json</code> 的 <code>tracks</code> 数组中读取已有 Track 名称，防止重复添加</li>
+<li><strong>物种匹配</strong>：根据 BAM 文件名前缀与 assemblies 名称的最长公共子串选择最相似的物种</li>
+<li><strong>匹配阈值</strong>：公共子串长度低于阈值（默认 10）时，认为无匹配，跳过处理</li>
+</ul>
+
+<h2>6️⃣ 注意事项</h2>
+<div class="note">
+<ul>
+<li>依赖工具：<code>samtools</code>、<code>jbrowse</code>、<code>awk</code>、<code>grep</code>、<code>find</code></li>
+<li>无需安装 <code>jq</code>，完全使用 <code>awk</code> 解析 <code>config.json</code></li>
+<li><code>config.json</code> 中必须包含 <code>"assemblies"</code> 和 <code>"tracks"</code> 字段</li>
+<li>仅处理扩展名为 <code>.bam</code> 的文件（大小写不敏感）</li>
+</ul>
+</div>
+
+</body>
+</html>
