@@ -28,6 +28,7 @@
     <ul>
         <li>自动解压、排序、压缩（bgzip）GFF 文件</li>
         <li>自动创建 tabix 索引（.tbi）</li>
+        <li>支持 .gff、.gff3 及其压缩文件（.gff.gz, .gff3.gz）</li>
         <li>使用 <b>最长公共子串</b> 匹配最合适的 Assembly 名称</li>
         <li>避免重复生成已存在的压缩文件和索引</li>
         <li>自动检查 JBrowse 配置文件避免重复 Track</li>
@@ -37,9 +38,9 @@
 
     <h2>📂 输入文件要求</h2>
     <ul>
-        <li>目录下的文件名需符合：<code>*.gff.gz</code> 或 <code>*.gff3.gz</code></li>
+        <li>目录下的文件名需符合：<code>*.gff</code>、<code>*.gff3</code> 或 <code>*.gff.gz</code>、<code>*.gff3.gz</code></li>
         <li>文件名中需包含物种信息，例如：
-            <code>Euplotes_vannus.MAC.Lyu-unpub.GFF.sort.gff3.gz</code>
+            <code>Euplotes_vannus.MAC.Lyu-unpub.GFF.sort.gff3.gz</code> 或 <code>Y52.new.gff3</code>
         </li>
         <li>JBrowse 配置文件中需有对应的 Assembly 名称，脚本会根据最长公共子串自动匹配</li>
     </ul>
@@ -48,7 +49,7 @@
     <pre><code>bash batchAddGff.sh &lt;目录路径&gt; [选项]</code></pre>
     <table>
         <tr><th>参数</th><th>说明</th><th>默认值</th></tr>
-        <tr><td>&lt;目录路径&gt;</td><td>包含 .gff.gz 或 .gff3.gz 文件的目录（必填）</td><td>-</td></tr>
+        <tr><td>&lt;目录路径&gt;</td><td>包含 .gff、.gff3、.gff.gz 或 .gff3.gz 文件的目录（必填）</td><td>-</td></tr>
         <tr><td>--debug</td><td>调试模式，打印详细执行步骤</td><td>关闭</td></tr>
         <tr><td>--force</td><td>强制重建中间文件，覆盖现有结果</td><td>关闭</td></tr>
         <tr><td>--dry-run</td><td>只显示计划执行的操作和匹配结果，不做实际修改</td><td>关闭</td></tr>
