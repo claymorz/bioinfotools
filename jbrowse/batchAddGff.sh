@@ -43,7 +43,7 @@ if $DEBUG; then
 fi
 
 shopt -s nullglob nocaseglob
-matched_files=("$INPUT_DIR"/*.gff*.gz)
+matched_files=("$INPUT_DIR"/*.gff*)
 total_files=${#matched_files[@]}
 
 echo "共匹配到 $total_files 个 GFF 文件" | tee -a "$LOG_FILE"
@@ -74,16 +74,16 @@ longest_common_substring() {
 
 assemblies=($(grep -oP '"name":\s*"\K[^"]+' "$CONFIG_FILE"))
 
-for gzfile in "${matched_files[@]}"; do
-  current_file="$gzfile"
-  [[ -f "$gzfile" ]] || continue
-  gzfile=$(realpath "$gzfile")
-  filename=$(basename "$gzfile")
+for file in "${matched_files[@]}"; do
+  current_file="$file"
+  [[ -f "$file" ]] || continue
+  file=$(realpath "$file")
+  filename=$(basename "$file")
 
-  echo "==== 处理文件: $gzfile ====" | tee -a "$LOG_FILE"
+  echo "==== 处理文件: $file ====" | tee -a "$LOG_FILE"
 
   # 定义最终文件名
-  sorted_gff_gz="${gzfile%.gz}.sorted.gff.gz"
+  sorted_gff_gz="${file%.gz}.sorted.gff.gz"
   tbi_file="${sorted_gff_gz}.tbi"
 
   # 匹配 Assembly
@@ -124,20 +124,40 @@ for gzfile in "${matched_files[@]}"; do
     continue
   fi
 
-  # 解压
-  $DEBUG && echo "👉 开始解压: $gzfile"
-  temp_gff="${gzfile%.gz}"
-  gunzip -c "$gzfile" > "$temp_gff"
-  $DEBUG && echo "✅ 解压完成: $temp_gff"
+  # 检查文件是否为 .gz 文件
+  if [[ "$filename" == *.gz ]]; then
+    # 如果是 .gz 文件，进行解压
+    $DEBUG && echo "👉 开始解压: $file"
+    temp_gff="${file%.gz}"
+    gunzip -c "$file" > "$temp_gff"
+    $DEBUG && echo "✅ 解压完成: $temp_gff"
+  else
+    # 非 .gz 文件，跳过解压，直接使用原文件
+    temp_gff="$file"
+    $DEBUG && echo "👉 跳过解压，直接使用文件: $temp_gff"
+  fi
 
-  # 排序
-  $DEBUG && echo "👉 开始排序"
-  sorted_gff="${temp_gff%.gff*}.sorted.gff"
-  filtered_count=$(grep -v "^#" "$temp_gff" | awk '!(NF>=9 && $5>=$4)' | wc -l)
-  (grep "^#" "$temp_gff";
-   grep -v "^#" "$temp_gff" | awk 'NF>=9 && $5>=$4' | sort -t"$(printf '\t')" -k1,1 -k4,4n
-  ) > "$sorted_gff"
-  $DEBUG && echo "✅ 排序完成，过滤掉非法行数: $filtered_count"
+  # 初始化 filtered_count 变量，防止未赋值
+  filtered_count=0
+
+  # 排序部分，优先检查 jbrowse sort-gff 是否可用
+  if command -v jbrowse &> /dev/null && jbrowse sort-gff --help &> /dev/null; then
+    echo "👉 使用 jbrowse sort-gff 进行排序"
+    sorted_gff="${temp_gff%.gff}.sorted.gff"  # 给排序结果指定文件名
+    jbrowse sort-gff "$temp_gff" > "$sorted_gff"
+    sorted_status="jbrowse_sort"
+  else
+    echo "👉 jbrowse sort-gff 不可用，使用默认排序方法"
+    sorted_gff="${temp_gff%.gff}.sorted.gff"  # 给排序结果指定文件名
+    filtered_count=$(grep -v "^#" "$temp_gff" | awk '!(NF>=9 && $5>=$4)' | wc -l)
+    (grep "^#" "$temp_gff";
+     grep -v "^#" "$temp_gff" | awk 'NF>=9 && $5>=$4' | sort -t"$(printf '\t')" -k1,1 -k4,4n
+    ) > "$sorted_gff"
+    sorted_status="awk_sort"
+  fi
+
+  # 输出排序结果
+  echo "✅ 排序完成，使用方式：$sorted_status，过滤掉非法行数: $filtered_count"
 
   # 压缩
   $DEBUG && echo "👉 开始 bgzip 压缩"
